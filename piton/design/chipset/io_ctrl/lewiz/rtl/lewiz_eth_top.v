@@ -228,84 +228,69 @@ mac_eth_axi_lite mac_eth_axi_lite (
 );
 
 LMAC_CORE_TOP lmac_core_top (
- // Clocks and Reset
- .clk(net_axi_clk),     // i-1  250 Mhz  // changed to 156.25 MHz- 7 june 2018  
- .xA_clk(net_axi_clk),     // i-1  156.25 Mhz
- .reset_(rst_n),     // i-1(), FMAC specific reset (also follows PCIE RST)  
-                      
- .mode_10G(1'b0),       //i-1(), speed modes
- .mode_5G(1'b0),       //i-1(), 
- .mode_2p5G(1'b0),     //i-1(), 
- .mode_1G(1'b1),       //i-1(), 
-                   
- .TCORE_MODE (1'b0),   //i-1(), Always tie to 1     
+  .clk(net_axi_clk),           //i-1 250 Mhz // changed to 125 MHz - 7 june 2018  
+  .xauiA_clk(net_axi_clk),     //i-1 156.25 Mhz  // changed to 125 MHz - 7 june 2018
+  .gige_clk(net_axi_clk),     //i-1 125MHz
+  .reset_(rst_n),     //i-1 FMAC specific reset
+  .fmac_speed(),    //i(), 1G(), 23jul18
+  .TCORE_MODE (1'b0), //i-1(), Always tie to 1     
+// Interface to TX PATH
+  .tx_mac_wr(),   // i-1
+  .tx_mac_data(),  // i-64
+  .tx_mac_full(),  // o-1
+  .tx_mac_usedw(),  // o-13
+// Interface to RX PATH
+  .rx_mac_data(),  // o-64
+  .rx_mac_ctrl(),  //o-8(), rsvd(), pkt_end(), pkt_start
+  .rx_mac_empty(),  // o-1
+  .rx_mac_rd(),   // i-1
+  .rx_mac_rd_cycle(), // i-1(), from EXTR
+//for field debug
+  .rx_mac_full_dbg(), //o-1
+  .rx_mac_usedw_dbg(), //o-12  
+//for pre_CS/parser (I/F to RX Path/EXTR)
+  .cs_fifo_rd_en  (), //i-1
+  .cs_fifo_empty  (), //o-1
+  .ipcs_fifo_dout (), //o-64  
+//gige_gmii 11 July 2018
+  .gmii_txd(), 
+  .gmii_txc(),
+  .gmii_tx_en(),   //12 july 2018
+  .gmii_tx_vld(),  //17 july 2018  
+                       
+  .xauiA_linkup(),  // o-1(), link up for either 10G or 10G mode
+ 
+// From central decoder 
+  .host_addr_reg(),  // i-16
+  .SYS_ADDR(),   //i-4(), system assigned addr for the FMAC
+  
+// From mac_register
+  .fail_over(),   // i-1
+  .fmac_ctrl(),   // i-32
+  .fmac_ctrl1(),   // i-32
+ 
+  .fmac_rxd_en (),  //i-1(), 13jul11
 
- // GLUE LOGIC REQUIRED TO TRANSLATE _TO_ LeWiz FORMAT
- //
- // Interface to TX PATH   
- .tx_mac_wr(),    // i-1      // Tx enable signal
- .tx_mac_data(),   // i-64    // Tx 64bit input data 
- .tx_mac_full(),   // o-1     // Tx BP signal for full FIFO 
- .tx_mac_usedw(),   // o-13   // Tx how much of the length of the FIFO is in use
+  .mac_pause_value(), // i-32
+  .mac_addr0(),    // i-48
+  .mcast_saddr(),   // i-48
  
- // GLUE LOGIC REQUIRED TO TRANSLATE _FROM_ LeWiz FORMAT
- //
- // Interface to RX PATH
- .rx_mac_data(),   // o-64
- .rx_mac_ctrl(),   //o-8(), rsvd(), pkt_end(), pkt_start
- .rx_mac_empty(),   // o-1
- .rx_mac_rd(),    // i-1
- .rx_mac_rd_cycle(),  // i-1(), from EXTR
- //for field debug    
- .rx_mac_full_dbg(),  //o-1
- .rx_mac_usedw_dbg(),  //o-12
- 
- //for pre_CS/parser (I/F to RX Path/EXTR)
- .cs_fifo_rd_en  (),  //i-1
- .cs_fifo_empty  (),  //o-1
- .ipcs_fifo_dout (),     //o-64
+  .reg_rd_start(),  // i-1
+  .reg_rd_done(),  // i-1
+  
+// To mac_register
+  .FMAC_REGDOUT(),  // o-32
+  .FIFO_OV_IPEND(),  // o-1
 
-                             
- // Xaui/PHY A Interface
- .xgmii_reset_  (net_phy_rst_n),      //i-1
- .xgmii_txd (),    //o-64
- .xgmii_txc (),    //o-8
- 
- .xgmii_rxd (),   //i-64
- .xgmii_rxc (),    //i-8
- .xgmii_led_ (),   //i-2
- 
- .xauiA_linkup(),   // o-1(), link up for either 10G or 10G mode 
- 
- // From central decoder
- .host_addr_reg(),   // i-16
- .SYS_ADDR(),    //i-4(), system assigned addr for the FMAC
-                             
- // From mac_register
- .fail_over(),    // i-1
- .fmac_ctrl(),    // i-32
- .fmac_ctrl1(),    // i-32
-                      
- .fmac_rxd_en (),   //i-1(), 13jul11
- 
- .mac_pause_value(),  // i-32
- .mac_addr0(),     // i-48
- .mcast_saddr(),    // i-48
- 
- .reg_rd_start(),   // i-1 
-   
- .reg_rd_done_out(),  // i-1  
-                      
- .FMAC_REGDOUT(),   // o-32
- .FIFO_OV_IPEND()   // o-1
- );
+//gige_rx_gmii signals 16jul2018
+  .gmii_rxd(),   //i-8
+  .gmii_rxc(),   //i-1
+  .gmii_rx_dv(),   //i-1
 
-//
-//LeWiz GLUE
-//
+  .sfp_los()    //i-1(), assign to zero   
+			
+);
 
-//~
-   
    
 // Tri-state buffer
 IOBUF u_iobuf_dq (
