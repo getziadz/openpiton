@@ -1,6 +1,7 @@
 #!/bin/bash
 
-__TMP=$(dirname "$(readlink -f \"$0\")")
+echo $1
+__TMP=$(dirname "$(readlink -f \"$1\")")
 
 export PITON_ROOT=${__TMP}
 echo "PITON_ROOT=${PITON_ROOT}"
@@ -24,3 +25,4 @@ then
     ICARUS_HOME=/tigress/jbalkind/utils
 fi
 echo "ICARUS_HOME=${ICARUS_HOME}"
+export ICARUS_HOME
