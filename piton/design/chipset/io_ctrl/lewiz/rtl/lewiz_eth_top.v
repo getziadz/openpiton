@@ -227,6 +227,20 @@ mac_eth_axi_lite mac_eth_axi_lite (
   .phy_mdc          (net_phy_mdc)           // output wire phy_mdc
 );
 
+
+register_interface register_interface1(
+.reg_clk			(clk),						//i,   
+.reset_				(reset_),        			//i,   
+.host_addr			(host_addr),       	 		//o-16,
+.reg_rd_start		(reg_rd_start),				//o,   
+.reg_rd_done_out	(reg_rd_done_out),			//i,   
+.mac_regdout		(mac_regdout),				//i-32,
+.start				(start),					//i,   
+.address			(address)                   //i-16,
+);
+
+
+   
 LMAC_CORE_TOP lmac_core_top (
   .clk(net_axi_clk),           //i-1 250 Mhz // changed to 125 MHz - 7 june 2018  
   .xauiA_clk(net_axi_clk),     //i-1 156.25 Mhz  // changed to 125 MHz - 7 june 2018
