@@ -1,3 +1,4 @@
+set PITON_ROOT $::env(PITON_ROOT)
 set DV_ROOT $::env(DV_ROOT)
 set DESIGN_NAME dynamic_node_top_wrap
 
@@ -15,24 +16,7 @@ set RTL_SOURCE_FILES "${DV_ROOT}/design/include/define.h "
 eval "pyhp_preprocess ${RTL_SOURCE_FILES}"
 
 # Design files
-set RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/rtl/dynamic_node_top_wrap.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/rtl/dynamic_node_top.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/dynamic/rtl/dynamic_input_top_16.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/dynamic/rtl/dynamic_input_top_4.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/dynamic/rtl/dynamic_input_route_request_calc.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/dynamic/rtl/dynamic_input_control.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/dynamic/rtl/dynamic_output_top.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/dynamic/rtl/dynamic_output_datapath.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/dynamic/rtl/dynamic_output_control.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/components/rtl/bus_compare_equal.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/components/rtl/flip_bus.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/components/rtl/net_dff.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/components/rtl/one_of_eight.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/components/rtl/one_of_five.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/common/rtl/network_input_blk_multi_out.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/dynamic_node/common/rtl/space_avail_top.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/common/rtl/valrdy_to_credit.v "
-append RTL_SOURCE_FILES "${DV_ROOT}/design/chip/tile/common/rtl/credit_to_valrdy.v "
+set RTL_SOURCE_FILES "${PITON_ROOT}/pickles/dynamic_node/NETWORK_2dmesh/dynamic_node.pickle.v "
 
 # Preprocess the RTL with PyHP
 eval "pyhp_preprocess ${RTL_SOURCE_FILES}"
