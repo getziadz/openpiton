@@ -83,9 +83,17 @@ module chipset_impl(
 
     output                                      test_start,
 
+    // invalid access inside packet filter
+    output                                      invalid_access_o,
+
 `ifndef PITONSYS_NO_MC
 `ifdef PITON_FPGA_MC_DDR3
+`ifdef VCU118_BOARD
+    input                                       mc_clk_p,
+    input                                       mc_clk_n,
+`else  // VCU118_BOARD
     input                                       mc_clk,
+`endif // VCU118_BOARD
 `endif // endif PITON_FPGA_MC_DDR3
 `endif // endif PITONSYS_NO_MC
 
@@ -117,22 +125,31 @@ module chipset_impl(
     output                                      init_calib_complete,
     // Generalized interface for any FPGA board we support.
     // Not all signals will be used for all FPGA boards (see constraints)
+`ifdef VCU118_BOARD
+    output                                      ddr_act_n,
+    output [`DDR3_BG_WIDTH-1:0]                 ddr_bg,
+`else // VCU118_BOARD
+    output                                      ddr_cas_n,
+    output                                      ddr_ras_n,
+    output                                      ddr_we_n,
+`endif
     output [`DDR3_ADDR_WIDTH-1:0]               ddr_addr,
     output [`DDR3_BA_WIDTH-1:0]                 ddr_ba,
-    output                                      ddr_cas_n,
     output [`DDR3_CK_WIDTH-1:0]                 ddr_ck_n,
     output [`DDR3_CK_WIDTH-1:0]                 ddr_ck_p,
     output [`DDR3_CKE_WIDTH-1:0]                ddr_cke,
-    output                                      ddr_ras_n,
     output                                      ddr_reset_n,
-    output                                      ddr_we_n,
     inout  [`DDR3_DQ_WIDTH-1:0]                 ddr_dq,
     inout  [`DDR3_DQS_WIDTH-1:0]                ddr_dqs_n,
     inout  [`DDR3_DQS_WIDTH-1:0]                ddr_dqs_p,
 `ifndef NEXYSVIDEO_BOARD
     output [`DDR3_CS_WIDTH-1:0]                 ddr_cs_n,
 `endif // endif NEXYSVIDEO_BOARD
+`ifdef VCU118_BOARD
+    inout [`DDR3_DM_WIDTH-1:0]                  ddr_dm,
+`else
     output [`DDR3_DM_WIDTH-1:0]                 ddr_dm,
+`endif
     output                                      ddr_odt
 `endif // endif PITON_FPGA_MC_DDR3
 `endif // endif PITONSYS_NO_MC
@@ -160,6 +177,7 @@ module chipset_impl(
     inout                                       sd_cmd,
     inout   [3:0]                               sd_dat
 `endif // endif PITONSYS_SPI
+`ifdef PITON_FPGA_ETHERNETLITE
     ,
     input                                       net_axi_clk,
     output                                      net_phy_rst_n,
@@ -175,6 +193,7 @@ module chipset_impl(
 
     inout                                       net_phy_mdio_io,
     output                                      net_phy_mdc
+`endif // PITON_FPGA_ETHERNETLITE
 `endif // endif PITONSYS_IO_CTRL
 `ifdef PITON_ARIANE
     ,
@@ -425,6 +444,24 @@ test_end_checker test_end_checker(
 `endif
 
 <%
+
+# need to figure out number of invalid access signals
+tmpNum=0
+for i in range(len(devices)):
+    if devices[i]["noc2_in"]:
+        tmpNum +=1
+
+if tmpNum:
+    print """
+wire [%d-1:0] invalid_access;
+assign invalid_access_o = |invalid_access;
+""" % (tmpNum)
+else:
+    print """
+assign invalid_access_o = 1'b0;
+"""
+
+tmpIdx=0
 for i in range(len(devices)):
     if devices[i]["noc2_in"]:
         print """
@@ -432,7 +469,7 @@ packet_filter %s_packet_filter(
     .clk(chipset_clk),
     .rst_n(chipset_rst_n),
     // need to connect this to a LED
-    .invalid_access_o(),
+    .invalid_access_o(invalid_access[%d]),
 
     // noc2 to filter wires
     .noc2_filter_val(%s_filter_noc2_valid),
@@ -456,11 +493,12 @@ packet_filter %s_packet_filter(
 
     .uart_boot_en(uart_boot_en)
 );
-""" % (devices[i]["name"], devices[i]["name"], devices[i]["name"],
+""" % (devices[i]["name"], tmpIdx,
        devices[i]["name"], devices[i]["name"], devices[i]["name"],
        devices[i]["name"], devices[i]["name"], devices[i]["name"],
-       devices[i]["name"], devices[i]["name"], devices[i]["name"],devices[i]["name"],
-)
+       devices[i]["name"], devices[i]["name"], devices[i]["name"],
+       devices[i]["name"], devices[i]["name"], devices[i]["name"])
+        tmpIdx+=1
 %>
 
 <%
@@ -595,8 +633,6 @@ mc_top mc_top(
 
     .core_ref_clk(chipset_clk),
 
-    .sys_clk(mc_clk),
-
     .sys_rst_n(chipset_rst_n),
 
     .mc_flit_in_val(buf_mem_noc2_valid),
@@ -609,15 +645,24 @@ mc_top mc_top(
 
     .uart_boot_en(uart_boot_en),
 
+`ifdef VCU118_BOARD
+    .sys_clk_p(mc_clk_p),
+    .sys_clk_n(mc_clk_n),
+    .ddr_act_n(ddr_act_n),
+    .ddr_bg(ddr_bg),
+`else // VCU118_BOARD
+    .sys_clk(mc_clk),
+    .ddr_cas_n(ddr_cas_n),
+    .ddr_ras_n(ddr_ras_n),
+    .ddr_we_n(ddr_we_n),
+`endif
+
     .ddr_addr(ddr_addr),
     .ddr_ba(ddr_ba),
-    .ddr_cas_n(ddr_cas_n),
     .ddr_ck_n(ddr_ck_n),
     .ddr_ck_p(ddr_ck_p),
     .ddr_cke(ddr_cke),
-    .ddr_ras_n(ddr_ras_n),
     .ddr_reset_n(ddr_reset_n),
-    .ddr_we_n(ddr_we_n),
     .ddr_dq(ddr_dq),
     .ddr_dqs_n(ddr_dqs_n),
     .ddr_dqs_p(ddr_dqs_p),
@@ -630,6 +675,8 @@ mc_top mc_top(
     .init_calib_complete_out(init_calib_complete)
 );
 `else
+
+`include "cross_module.tmp.h"
 
 // Fake Memory Controller
 fake_mem_ctrl fake_mem_ctrl(
@@ -680,10 +727,12 @@ fake_mem_ctrl fake_mem_ctrl(
 
 `endif // endif PITONSYS_NO_MC
 
-`ifdef PITONSYS_IOCTRL
 
 wire net_interrupt;
 wire uart_interrupt;
+
+`ifdef PITONSYS_IOCTRL
+
 wire ciop_iob_rst_n;
 assign ciop_iob_rst_n = io_ctrl_rst_n & test_start & ~piton_ready_n;
 
@@ -802,43 +851,54 @@ uart_top        uart_top (
 `endif
 `endif
 
-eth_top eth_top (
-    .chipset_clk     ( chipset_clk        ),
-    .rst_n           ( chipset_rst_n      ),
 
-    .net_interrupt   ( net_interrupt      ),
+`ifdef PITON_FPGA_ETHERNETLITE
+    eth_top #(
+    `ifdef PITON_ARIANE
+      .SWAP_ENDIANESS(1)
+    `else
+      .SWAP_ENDIANESS(0)
+    `endif
+    ) eth_top (
+        .chipset_clk     ( chipset_clk        ),
+        .rst_n           ( chipset_rst_n      ),
 
-    .noc_in_val      ( buf_net_noc2_valid ),
-    .noc_in_data     ( buf_net_noc2_data  ),
-    .noc_in_rdy      ( net_buf_noc2_ready ),
+        .net_interrupt   ( net_interrupt      ),
 
-    .noc_out_val     ( net_buf_noc3_valid ),
-    .noc_out_data    ( net_buf_noc3_data  ),
-    .noc_out_rdy     ( buf_net_noc3_ready ),
+        .noc_in_val      ( buf_net_noc2_valid ),
+        .noc_in_data     ( buf_net_noc2_data  ),
+        .noc_in_rdy      ( net_buf_noc2_ready ),
 
-    .net_axi_clk     ( net_axi_clk        ),
-    .net_phy_rst_n   ( net_phy_rst_n      ),
+        .noc_out_val     ( net_buf_noc3_valid ),
+        .noc_out_data    ( net_buf_noc3_data  ),
+        .noc_out_rdy     ( buf_net_noc3_ready ),
 
-    .net_phy_tx_clk  ( net_phy_tx_clk     ),
-    .net_phy_tx_en   ( net_phy_tx_en      ),
-    .net_phy_tx_data ( net_phy_tx_data    ),
+        .net_axi_clk     ( net_axi_clk        ),
+        .net_phy_rst_n   ( net_phy_rst_n      ),
 
-    .net_phy_rx_clk  ( net_phy_rx_clk     ),
-    .net_phy_dv      ( net_phy_dv         ),
-    .net_phy_rx_data ( net_phy_rx_data    ),
-    .net_phy_rx_er   ( net_phy_rx_er      ),
+        .net_phy_tx_clk  ( net_phy_tx_clk     ),
+        .net_phy_tx_en   ( net_phy_tx_en      ),
+        .net_phy_tx_data ( net_phy_tx_data    ),
 
-    .net_phy_mdio_io ( net_phy_mdio_io    ),
-    .net_phy_mdc     ( net_phy_mdc        )
-);
+        .net_phy_rx_clk  ( net_phy_rx_clk     ),
+        .net_phy_dv      ( net_phy_dv         ),
+        .net_phy_rx_data ( net_phy_rx_data    ),
+        .net_phy_rx_er   ( net_phy_rx_er      ),
+
+        .net_phy_mdio_io ( net_phy_mdio_io    ),
+        .net_phy_mdc     ( net_phy_mdc        )
+    );
+`endif // PITON_FPGA_ETHERNETLITE
 
 `else // PITONSYS_IOCTRL
-// Fake iobridge
-ciop_fake_iob ciop_fake_iob(
-    .noc_in_val        ( intf_chipset_val_noc1 ),
-    .noc_in_rdy        ( intf_chipset_rdy_noc1 ),
-    .noc_in_data       ( intf_chipset_data_noc1),
 
+assign net_interrupt  = 1'b0;
+assign uart_interrupt = 1'b0;
+
+// Fake iobridge
+// Tie noc1 input low because it's unused
+assign intf_chipset_rdy_noc1 = 1'b0;
+ciop_fake_iob ciop_fake_iob(
     .noc_out_val       ( iob_filter_noc2_valid ),
     .noc_out_rdy       ( filter_iob_noc2_ready ),
     .noc_out_data      ( iob_filter_noc2_data  ),
@@ -900,16 +960,49 @@ fake_uart fake_uart (
 
 `ifdef PITON_ARIANE
 
-    // irq sources into PLIC are not connected yet
-    wire irq_sources;
-    assign irq_sources = 1'b0;
+    wire [1:0] irq_sources, irq_le;
+    // 0:level 1:edge
+    // Eth is edge, Uart is level
+    assign irq_le      = {1'b1, 1'b0};
+    assign irq_sources = {net_interrupt, uart_interrupt};
 
-    serpent_peripherals #(
+    // this is for selecting the right bootrom (1: baremetal, 0: linux)
+    wire ariane_boot_sel;
+`ifdef PITON_FPGA_SYNTH
+  assign ariane_boot_sel   = uart_boot_en;
+`else
+  `ifdef ARIANE_SIM_LINUX_BOOT
+    assign ariane_boot_sel = 1'b0;
+  `else
+    assign ariane_boot_sel = 1'b1;
+  `endif
+`endif
+
+<%
+DmBase    = 0
+RomBase   = 0
+ClintBase = 0
+PlicBase  = 0
+for i in range(len(devices)):
+    if devices[i]["name"] == "ariane_debug":
+        DmBase = devices[i]["base"]
+    if devices[i]["name"] == "ariane_bootrom":
+        RomBase = devices[i]["base"]
+    if devices[i]["name"] == "ariane_clint":
+        ClintBase = devices[i]["base"]
+    if devices[i]["name"] == "ariane_plic":
+        PlicBase = devices[i]["base"]
+str = '''
+    riscv_peripherals #(
         .DataWidth      ( `NOC_DATA_WIDTH ),
         .NumHarts       (      `NUM_TILES ),
-        .NumSources     (               1 ),
-        .SwapEndianess  (               1 )
-    ) i_serpent_peripherals (
+        .NumSources     (               2 ),
+        .SwapEndianess  (               1 ),
+        .DmBase         ( 64'h%016x ),
+        .RomBase        ( 64'h%016x ),
+        .ClintBase      ( 64'h%016x ),
+        .PlicBase       ( 64'h%016x )
+    ) i_riscv_peripherals (
         .clk_i                           ( chipset_clk                   ),
         .rst_ni                          ( chipset_rst_n                 ),
         .testmode_i                      ( 1'b0                          ),
@@ -937,6 +1030,8 @@ fake_uart fake_uart (
         .ariane_plic_buf_noc3_data_o     ( ariane_plic_buf_noc3_data     ),
         .ariane_plic_buf_noc3_valid_o    ( ariane_plic_buf_noc3_valid    ),
         .buf_ariane_plic_noc3_ready_i    ( buf_ariane_plic_noc3_ready    ),
+        // This selects either the BM or linux bootrom
+        .ariane_boot_sel_i               ( ariane_boot_sel               ),
         // Debug sigs to cores
         .ndmreset_o                      ( ndmreset_o                    ),
         .dmactive_o                      ( dmactive_o                    ),
@@ -948,14 +1043,19 @@ fake_uart fake_uart (
         .trst_ni                         ( trst_ni                       ),
         .td_i                            ( td_i                          ),
         .td_o                            ( td_o                          ),
+        .tdo_oe_o                        (                               ),
         // CLINT
         .rtc_i                           ( rtc_i                         ),
         .timer_irq_o                     ( timer_irq_o                   ),
         .ipi_o                           ( ipi_o                         ),
         // PLIC
+        .irq_le_i                        ( irq_le                        ), // 0:level 1:edge
         .irq_sources_i                   ( irq_sources                   ),
         .irq_o                           ( irq_o                         )
     );
+''' % (int(DmBase), int(RomBase), int(ClintBase), int(PlicBase))
+print str
+%>
 
 `else
 

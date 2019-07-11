@@ -59,6 +59,7 @@ def usage():
     print >> sys.stderr, "       -b, --board  <board_type>"
     print >> sys.stderr, "              Name of a supported Xilinx's development board. Available options are:"
     print >> sys.stderr, "                  vc707"
+    print >> sys.stderr, "                  vcu118"
     print >> sys.stderr, "                  genesys2"
     print >> sys.stderr, "                  nexysVideo"
     print >> sys.stderr, "\n       -d, --design <design>"
@@ -131,6 +132,8 @@ def usage():
     print >> sys.stderr, "              Run steps of flow using SLURM job scheduler"
     print >> sys.stderr, "\n       --swait"
     print >> sys.stderr, "\n            Wait for slurm jobs to finish"
+    print >> sys.stderr, "\n       -j, --jobs"
+    print >> sys.stderr, "              Number of jobs to use in Vivado implementation flow"
     print >> sys.stderr, "\n       -h, --help"
     print >> sys.stderr, "              Display this help message and exit"
     print >> sys.stderr, "\n"
@@ -400,11 +403,14 @@ def setParserOptions(parser):
     parser.add_option("--passthru-dec-uart-pkttrace", dest="passthru_dec_uart_pkttrace", action="store_true", default=False)
     parser.add_option("--define", dest="define", action="store", default=None)
     parser.add_option("--oled", dest="oled", action="store")
+    parser.add_option("-j", "--jobs", dest="jobs", action="store", default=1)
     parser.add_option("-h", "--help", dest="help", action="store_true", default=False)
     parser.add_option("--gen-test-bram", dest="gen_test_bram", action="store_true", default=False)  # depricated ?
     parser.add_option("--make-mem-map", dest="make_mem_map", action="store_true", default=False)
     parser.add_option("--slurm", dest="slurm", action="store_true", default=False)
     parser.add_option("--swait", dest="swait", action="store_true", default=False)
+    parser.add_option("--axi4_mem", dest="axi4_mem", action="store_true", default=False)
+    parser.add_option("--zeroer_off", dest="zeroer_off", action="store_true", default=False)
 
     return parser
 
@@ -414,11 +420,26 @@ def makeDefList(options):
     #df = options.board.upper() + "_BOARD"
     #defines.append(df)
 
+    # disable CSM in this case
+    if options.core == 'ariane':
+        defines.append("NO_RTL_CSM")
+
     # --no-ddr option
     if (options.no_ddr == True) or (options.board == "piton_board"):
         defines.append("PITONSYS_NO_MC")
     else:   # default option
         defines.append("PITON_FPGA_MC_DDR3")
+
+    # --axi4_mem option
+    if (options.axi4_mem == True):
+        if (options.board not in {"vc707"}):
+            print_warning("axi4_mem option is ignored without board != vc707")
+        else:
+            defines.append("PITONSYS_AXI4_MEM")
+
+    # --zeroer_off option
+    if (options.zeroer_off == False):
+        defines.append("PITONSYS_MEM_ZEROER")
 
     # do not use SD controller if BRAM is used for boot or a test
     if (options.test_name != None) or (options.board == "piton_board"):
@@ -598,8 +619,7 @@ def main():
     ##################################
     # Set environment vars for pyhp
     ##################################
-
-    print_info("---- RTL configuration ----")
+    print_info("----- System Configuration -----")
 
     # tile config
     if (int(options.x_tiles)*int(options.y_tiles)) > 1:
@@ -643,25 +663,25 @@ def main():
         for i in range(int(options.num_tiles)):
             if i %2:
                 os.environ['RTL_PICO' + str(i)] = "1"
-                print_info('defining RTL_PICO' + str(i))
+                print_info('setenv RTL_PICO' + str(i))
 
             else:
                 os.environ['RTL_SPARC' + str(i)] = "1"
-                print_info('defining RTL_SPARC' + str(i))
+                print_info('setenv RTL_SPARC' + str(i))
 
     elif options.core == 'ariane':
         os.environ['PITON_ARIANE'] = "1"
-        os.environ['L2_CAM_MSHR']  = "1"
+        os.environ['WT_DCACHE']    = "1"
 
         for i in range(int(options.num_tiles)):
             os.environ['RTL_ARIANE' + str(i)] = "1"
-            print_info('defining RTL_ARIANE' + str(i))
+            print_info('setenv RTL_ARIANE' + str(i))
 
     elif options.core == 'sparc':
         # this is the default
         for i in range(int(options.num_tiles)):
             os.environ['RTL_SPARC' + str(i)] = "1"
-            print_info('defining RTL_SPARC' + str(i))
+            print_info('setenv RTL_SPARC' + str(i))
 
     else:
         print_error("invalid core configuration " + str(options.core))
@@ -694,7 +714,15 @@ def main():
     os.environ['CONFIG_L2_SIZE']           = str(options.config_l2_size)
     os.environ['CONFIG_L2_ASSOCIATIVITY']  = str(options.config_l2_associativity)
 
-    print_info("---------------------------")
+    # this is needed to generate the device tree
+    os.environ['CONFIG_SYS_FREQ']          = str(int(float(design_data["BOARDS"][options.board]["FREQ"]) * 1e6))
+
+    print_info("---- Additional RTL Defines ----")
+
+    for d in defines:
+        print_info(d)
+
+    print_info("--------------------------------")
 
     ##################################
     # Get a trace
@@ -706,14 +734,14 @@ def main():
         config = ' -x_tiles=' + str(options.x_tiles)                         + \
                  ' -y_tiles=' + str(options.y_tiles)                         + \
                  ' -network_config=' + str(options.network_config)           + \
-                 ' -config_l1i_size=' + str(options.network_config)          + \
-                 ' -config_l1d_size=' + str(options.network_config)          + \
-                 ' -config_l15_size=' + str(options.network_config)          + \
-                 ' -config_l2_size='  + str(options.network_config)          + \
-                 ' -config_l1i_associativity=' + str(options.network_config) + \
-                 ' -config_l1d_associativity=' + str(options.network_config) + \
-                 ' -config_l15_associativity=' + str(options.network_config) + \
-                 ' -config_l2_associativity='  + str(options.network_config)
+                 ' -config_l1i_size=' + str(options.config_l1i_size)          + \
+                 ' -config_l1d_size=' + str(options.config_l1d_size)          + \
+                 ' -config_l15_size=' + str(options.config_l1i_size)          + \
+                 ' -config_l2_size='  + str(options.config_l2_size)          + \
+                 ' -config_l1i_associativity=' + str(options.config_l1i_associativity) + \
+                 ' -config_l1d_associativity=' + str(options.config_l1d_associativity) + \
+                 ' -config_l15_associativity=' + str(options.config_l15_associativity) + \
+                 ' -config_l2_associativity='  + str(options.config_l2_associativity)
 
         if options.core == 'pico':
             config + ' -pico'
@@ -786,6 +814,9 @@ def main():
 
     # FPGA implementation
     if run_fpga_impl:
+        if int(options.jobs)>1:
+            print_info("Using %d jobs in Vivado" % int(options.jobs))
+        os.environ['NUM_VIVADO_JOBS']   = str(int(options.jobs))
         jid = runImplFlow(options.board, design_data, rc_dir.work, rc_dir.log, defines, options.slurm, dep_list)
         if jid != None:
             dep_list.append(jid)
