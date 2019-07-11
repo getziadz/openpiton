@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#source /usr/licensed/synopsys/profile
+export PATH=/tigress/jbalkind/utils/bin:${PATH}
+
+#export ASAP7_IP=/tigress/tingjung/piton/libraries/ASAP7/ASAP7_PDKandLIB_v1p5
+export NAN45_IP=/tigress/tingjung/piton/libraries/Nan45/extracted/NangateOpenCellLibrary_PDKv1_3_v2010_12

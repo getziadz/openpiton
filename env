@@ -1,0 +1,7 @@
+#!/bin/bash
+
+eval ENV_SCRIPT_ROOT="$( cd "$(dirname -- "$0")" ; pwd -P )"
+export PITON_ROOT=${ENV_SCRIPT_ROOT}
+echo "Setting PITON_ROOT=${PITON_ROOT}"
+
+. ${PITON_ROOT}/piton/piton_settings.bash
