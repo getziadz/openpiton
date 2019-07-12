@@ -6,7 +6,7 @@ source activate gt5_python
 export PATH=/tigress/jbalkind/utils/bin:${PATH}
 
 # . /usr/licensed/synopsys/profile
-export PITON_ROOT=/tigress/gt5/projects/OpenPiton/openpiton-getziadz
+export PITON_ROOT=`pwd`
  . ${PITON_ROOT}/piton/piton_settings.bash
 
 
