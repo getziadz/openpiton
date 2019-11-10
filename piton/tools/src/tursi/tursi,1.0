@@ -289,10 +289,15 @@ def makeDefList(options):
     return defines
 
 
+# The following dictionary provides the name of the top-level module for each
+# core description 
 fusesoc2toplevel = {
     "openpiton::chip"               : "chip",
     "openpiton::chip_bridge"        : "chip_bridge",
-#    "openpiton::dynamic_node"       : "[*](#dynamic-node-top-module)",
+## Dynamic node is commented out as it is a special case. Depending on the
+## choice of interconnenct (2d_mesh vs xbar) a different top-level module is used
+##  "openpiton::dynamic_node"       : "[*](#dynamic-node-top-module)",
+##
     "openpiton::fpga_bridge_rcv_32" : "fpga_bridge_rcv_32",
     "openpiton::fpu"                : "fpu",
     "openpiton::ifu_esl"            : "sparc_ifu_esl",
@@ -314,7 +319,7 @@ fusesoc2toplevel = {
     "openpiton::sparc_mul"          : "sparc_mul_top_nospu_wrap",
     "openpiton::sparc_tlu"          : "tlu_nospu_wrap",
     "openpiton::tile"               : "tile",
-    "verticalresearchgroup::miaow"  : "miaow"
+    "verticalresearchgroup::miaow"  : "neko"
 }
 
 json_template = """{{
@@ -421,6 +426,9 @@ def main():
         args.config_rtl.append('NO_SLAM_RANDOM')
         args.config_rtl.append('NO_MRA_VAL')
         args.config_rtl.append('PITON_DPI')
+
+    if args.fusesoc_core == "verticalresearchgroup::miaow":
+        args.config_rtl.append('MIAOW_FPGA_BUILD')
 
     # core variant
     print_info("core      = " + str(args.core))
