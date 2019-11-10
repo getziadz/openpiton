@@ -292,7 +292,7 @@ def makeDefList(options):
 fusesoc2toplevel = {
     "openpiton::chip"               : "chip",
     "openpiton::chip_bridge"        : "chip_bridge",
-    "openpiton::dynamic_node"       : "[*](#dynamic-node-top-module)",
+#    "openpiton::dynamic_node"       : "[*](#dynamic-node-top-module)",
     "openpiton::fpga_bridge_rcv_32" : "fpga_bridge_rcv_32",
     "openpiton::fpu"                : "fpu",
     "openpiton::ifu_esl"            : "sparc_ifu_esl",
@@ -319,7 +319,7 @@ fusesoc2toplevel = {
 
 json_template = """{{
  "version"  : {__version__},
- "toplevel" : {__toplevel__}
+ "toplevel" : "{__toplevel__}"
 }}
 """
 
